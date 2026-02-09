@@ -1,0 +1,11 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ENV=development
+      - SCHWAB_CLIENT_ID=${SCHWAB_CLIENT_ID}
+      - SCHWAB_CLIENT_SECRET=${SCHWAB_CLIENT_SECRET}
+      - SCHWAB_CALLBACK_URL=${SCHWAB_CALLBACK_URL}
