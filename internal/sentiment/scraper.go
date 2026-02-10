@@ -36,9 +36,9 @@ func NewScraper() *Scraper {
 func (s *Scraper) ScrapeRedditWSB(ctx context.Context) ([]TickerMention, error) {
 	// Reddit's public JSON API (no auth needed for public subreddits)
 	urls := []string{
-		"https://www.reddit.com/r/wallstreetbets/hot.json?limit=1000",
-		"https://www.reddit.com/r/wallstreetbets/rising.json?limit=1000",
-		"https://www.reddit.com/r/options/hot.json?limit=1000",
+		"https://www.reddit.com/r/wallstreetbets/hot.json?limit=25",
+		"https://www.reddit.com/r/wallstreetbets/rising.json?limit=25",
+		"https://www.reddit.com/r/options/hot.json?limit=25",
 	}
 
 	mentions := make(map[string]*TickerMention)

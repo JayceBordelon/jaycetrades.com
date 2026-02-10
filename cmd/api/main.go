@@ -14,23 +14,23 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Validate required config
+	
 	if cfg.SchwabClientID == "" || cfg.SchwabSecret == "" {
 		log.Println("WARNING: SCHWAB_CLIENT_ID and SCHWAB_CLIENT_SECRET not set")
 		log.Println("Set these environment variables to enable Schwab API integration")
 	}
 
-	// Initialize Schwab client
+	
 	schwabClient := schwab.NewClient(schwab.Credentials{
 		ClientID:     cfg.SchwabClientID,
 		ClientSecret: cfg.SchwabSecret,
 		RedirectURI:  cfg.SchwabCallback,
 	})
 
-	// Initialize sentiment scraper
+	
 	scraper := sentiment.NewScraper()
 
-	// Setup Gin
+	
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
