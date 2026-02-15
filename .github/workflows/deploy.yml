@@ -1,0 +1,95 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+    outputs:
+      commit_sha:
+        description: "Full commit SHA"
+        value: ${{ jobs.deploy.outputs.commit_sha }}
+      short_sha:
+        description: "Short commit SHA"
+        value: ${{ jobs.deploy.outputs.short_sha }}
+      commit_message:
+        description: "Commit message"
+        value: ${{ jobs.deploy.outputs.commit_message }}
+      commit_author:
+        description: "Commit author"
+        value: ${{ jobs.deploy.outputs.commit_author }}
+      commit_timestamp:
+        description: "Commit timestamp"
+        value: ${{ jobs.deploy.outputs.commit_timestamp }}
+      status:
+        description: "Deploy status"
+        value: ${{ jobs.deploy.outputs.status }}
+      error:
+        description: "Deploy error message"
+        value: ${{ jobs.deploy.outputs.error }}
+
+jobs:
+  deploy:
+    name: Rolling Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.get_info.outputs.commit_sha }}
+      short_sha: ${{ steps.get_info.outputs.short_sha }}
+      commit_message: ${{ steps.get_info.outputs.commit_message }}
+      commit_author: ${{ steps.get_info.outputs.commit_author }}
+      commit_timestamp: ${{ steps.get_info.outputs.commit_timestamp }}
+      status: ${{ steps.deploy_status.outputs.status }}
+      error: ${{ steps.deploy_status.outputs.error }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get commit info
+        id: get_info
+        run: |
+          echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -n 1)
+          echo "commit_message<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+          echo "commit_author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+
+          COMMIT_TIMESTAMP=$(git log -1 --pretty=format:'%aI')
+          echo "commit_timestamp=$COMMIT_TIMESTAMP" >> $GITHUB_OUTPUT
+
+      - name: Deploy to production
+        id: deploy_run
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.project_path }}
+
+            # Stop existing container, recreate with new image
+            docker compose down
+            docker compose up -d
+
+            # Cleanup old images
+            docker image prune -f
+            docker images "jaycetrades.com-scanner" --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
+
+      - name: Set deploy status
+        id: deploy_status
+        if: always()
+        run: |
+          if [ "${{ steps.deploy_run.outcome }}" == "success" ]; then
+            echo "status=✓ PASSED" >> $GITHUB_OUTPUT
+            echo "error=" >> $GITHUB_OUTPUT
+          else
+            echo "status=✗ FAILED" >> $GITHUB_OUTPUT
+            echo "error=Deployment failed - containers may not have started properly" >> $GITHUB_OUTPUT
+          fi

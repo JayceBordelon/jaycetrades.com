@@ -1,0 +1,73 @@
+name: Health Check
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+    outputs:
+      status:
+        description: "Health check status"
+        value: ${{ jobs.healthcheck.outputs.status }}
+      results:
+        description: "Health check results"
+        value: ${{ jobs.healthcheck.outputs.results }}
+      error:
+        description: "Health check error message"
+        value: ${{ jobs.healthcheck.outputs.error }}
+
+jobs:
+  healthcheck:
+    name: Verify Container
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.health.outputs.status }}
+      results: ${{ steps.health.outputs.results }}
+      error: ${{ steps.health.outputs.error }}
+    steps:
+      - name: Verify container is running
+        id: health
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.project_path }}
+
+            # Check if container is running
+            CONTAINER_STATUS=$(docker compose ps --format json | jq -r '.[0].State // "not found"')
+
+            if [ "$CONTAINER_STATUS" == "running" ]; then
+              echo "✓ Scanner container is running"
+
+              # Check container logs for startup message
+              LOGS=$(docker compose logs --tail=20 scanner 2>&1)
+              if echo "$LOGS" | grep -q "Options trade scanner started"; then
+                echo "✓ Scanner started successfully"
+              else
+                echo "⚠ Scanner running but startup message not found in recent logs"
+              fi
+
+              exit 0
+            else
+              echo "✗ Scanner container is not running (status: $CONTAINER_STATUS)"
+              docker compose logs --tail=50 scanner
+              exit 1
+            fi
+
+      - name: Set health status
+        id: set_health
+        if: always()
+        run: |
+          if [ "${{ steps.health.outcome }}" == "success" ]; then
+            echo "status=✓ PASSED" >> $GITHUB_OUTPUT
+            echo "results=✓ Scanner container running" >> $GITHUB_OUTPUT
+            echo "error=" >> $GITHUB_OUTPUT
+          else
+            echo "status=✗ FAILED" >> $GITHUB_OUTPUT
+            echo "results=✗ Scanner container not running" >> $GITHUB_OUTPUT
+            echo "error=Container health check failed - scanner may have crashed on startup" >> $GITHUB_OUTPUT
+          fi

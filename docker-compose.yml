@@ -1,11 +1,11 @@
 services:
-  api:
+  scanner:
     build: .
-    ports:
-      - "8080:8080"
     environment:
-      - PORT=8080
-      - ENV=development
-      - SCHWAB_CLIENT_ID=${SCHWAB_CLIENT_ID}
-      - SCHWAB_CLIENT_SECRET=${SCHWAB_CLIENT_SECRET}
-      - SCHWAB_CALLBACK_URL=${SCHWAB_CALLBACK_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - EMAIL_RECIPIENTS=${EMAIL_RECIPIENTS}
+      - EMAIL_FROM=${EMAIL_FROM:-trades@jaycetrades.com}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-25 9 * * 1-5}
+      - RUN_ON_START=${RUN_ON_START:-false}
+    restart: unless-stopped

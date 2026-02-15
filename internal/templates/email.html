@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Subject}}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0a0a0a;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding-bottom: 30px; border-bottom: 1px solid #222;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
+                      <span style="color: #10b981;">&#9650;</span> JayceTrades
+                    </h1>
+                  </td>
+                  <td align="right" style="color: #666; font-size: 14px;">
+                    {{.Date}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td style="padding: 40px 0 20px 0;">
+              <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #ffffff;">
+                Today's Top Plays
+              </h2>
+              <p style="margin: 10px 0 0 0; font-size: 15px; color: #888; line-height: 1.5;">
+                3 high-conviction options trades based on WSB sentiment and market analysis.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Trades -->
+          {{range $i, $trade := .Trades}}
+          <tr>
+            <td style="padding: 20px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #111 0%, #1a1a1a 100%); border-radius: 16px; border: 1px solid #2a2a2a;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <!-- Trade Header -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td>
+                          <span style="display: inline-block; background: {{if eq $trade.ContractType "CALL"}}#10b981{{else}}#ef4444{{end}}; color: #000; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {{$trade.ContractType}}
+                          </span>
+                        </td>
+                        <td align="right">
+                          <span style="color: #666; font-size: 13px;">
+                            {{$trade.DTE}} DTE
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Symbol & Strike -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 16px;">
+                      <tr>
+                        <td>
+                          <span style="font-size: 32px; font-weight: 700; color: #ffffff; letter-spacing: -1px;">
+                            ${{$trade.Symbol}}
+                          </span>
+                        </td>
+                        <td align="right">
+                          <span style="font-size: 24px; font-weight: 600; color: {{if eq $trade.ContractType "CALL"}}#10b981{{else}}#ef4444{{end}};">
+                            ${{printf "%.0f" $trade.StrikePrice}}
+                          </span>
+                          <span style="color: #666; font-size: 14px;"> strike</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Details Row -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 20px; background: #0a0a0a; border-radius: 8px;">
+                      <tr>
+                        <td style="padding: 16px; text-align: center; border-right: 1px solid #222;">
+                          <div style="color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Expires</div>
+                          <div style="color: #fff; font-size: 14px; font-weight: 600;">{{$trade.Expiration}}</div>
+                        </td>
+                        <td style="padding: 16px; text-align: center; border-right: 1px solid #222;">
+                          <div style="color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Est. Price</div>
+                          <div style="color: #fff; font-size: 14px; font-weight: 600;">${{printf "%.2f" $trade.EstimatedPrice}}</div>
+                        </td>
+                        <td style="padding: 16px; text-align: center;">
+                          <div style="color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Sentiment</div>
+                          <div style="color: {{if gt $trade.SentimentScore 0.0}}#10b981{{else if lt $trade.SentimentScore 0.0}}#ef4444{{else}}#888{{end}}; font-size: 14px; font-weight: 600;">
+                            {{if gt $trade.SentimentScore 0.3}}Bullish{{else if lt $trade.SentimentScore -0.3}}Bearish{{else}}Neutral{{end}}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Thesis -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 20px;">
+                      <tr>
+                        <td style="padding: 16px; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid {{if eq $trade.ContractType "CALL"}}#10b981{{else}}#ef4444{{end}};">
+                          <div style="color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Thesis</div>
+                          <div style="color: #ccc; font-size: 14px; line-height: 1.6;">
+                            {{$trade.Thesis}}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {{end}}
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 40px 0 20px 0; border-top: 1px solid #222;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="color: #666; font-size: 12px; line-height: 1.6;">
+                    <p style="margin: 0 0 10px 0;">
+                      <strong style="color: #888;">Disclaimer:</strong> This is not financial advice. Options trading involves substantial risk of loss. Past performance does not guarantee future results. Trade at your own risk.
+                    </p>
+                    <p style="margin: 0; color: #444;">
+                      Powered by JayceTrades &bull; Built with Claude AI
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

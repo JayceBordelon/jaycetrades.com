@@ -1,36 +1,43 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 type Config struct {
-	Port           string
-	Env            string
-	SchwabClientID string
-	SchwabSecret   string
-	SchwabCallback string
+	CronSchedule    string   // Cron expression (e.g., "0 9 * * 1-5" for 9am weekdays)
+	ResendAPIKey    string
+	ClaudeAPIKey    string
+	EmailRecipients []string // Comma-separated list of recipients
+	EmailFrom       string
 }
 
 func Load() *Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	cronSchedule := os.Getenv("CRON_SCHEDULE")
+	if cronSchedule == "" {
+		cronSchedule = "25 9 * * 1-5" // Default: 9:25am EST (5 min before market open)
 	}
 
-	env := os.Getenv("ENV")
-	if env == "" {
-		env = "development"
+	emailFrom := os.Getenv("EMAIL_FROM")
+	if emailFrom == "" {
+		emailFrom = "trades@jaycetrades.com"
 	}
 
-	callback := os.Getenv("SCHWAB_CALLBACK_URL")
-	if callback == "" {
-		callback = "https://localhost:8080/auth/callback"
+	var recipients []string
+	if r := os.Getenv("EMAIL_RECIPIENTS"); r != "" {
+		for _, email := range strings.Split(r, ",") {
+			if trimmed := strings.TrimSpace(email); trimmed != "" {
+				recipients = append(recipients, trimmed)
+			}
+		}
 	}
 
 	return &Config{
-		Port:           port,
-		Env:            env,
-		SchwabClientID: os.Getenv("SCHWAB_CLIENT_ID"),
-		SchwabSecret:   os.Getenv("SCHWAB_CLIENT_SECRET"),
-		SchwabCallback: callback,
+		CronSchedule:    cronSchedule,
+		ResendAPIKey:    os.Getenv("RESEND_API_KEY"),
+		ClaudeAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
+		EmailRecipients: recipients,
+		EmailFrom:       emailFrom,
 	}
 }

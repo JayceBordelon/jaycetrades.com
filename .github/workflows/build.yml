@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+    outputs:
+      status:
+        description: "Build status"
+        value: ${{ jobs.build.outputs.status }}
+      error:
+        description: "Build error message"
+        value: ${{ jobs.build.outputs.error }}
+
+jobs:
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.build_status.outputs.status }}
+      error: ${{ steps.build_status.outputs.error }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build application
+        id: build_run
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.project_path }}
+
+            COMMIT_SHA=$(git rev-parse HEAD)
+            SHORT_SHA=$(git rev-parse --short HEAD)
+
+            docker compose build --no-cache scanner
+            docker tag jaycetrades.com-scanner:latest "jaycetrades.com-scanner:${SHORT_SHA}"
+
+      - name: Set build status
+        id: build_status
+        if: always()
+        run: |
+          if [ "${{ steps.build_run.outcome }}" == "success" ]; then
+            echo "status=✓ PASSED" >> $GITHUB_OUTPUT
+            echo "error=" >> $GITHUB_OUTPUT
+          else
+            echo "status=✗ FAILED" >> $GITHUB_OUTPUT
+            echo "error=Docker build failed - check build logs and dependencies" >> $GITHUB_OUTPUT
+          fi

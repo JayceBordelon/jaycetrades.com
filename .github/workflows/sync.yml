@@ -1,0 +1,55 @@
+name: Sync
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+      repo_url:
+        required: true
+        type: string
+    outputs:
+      status:
+        description: "Sync status"
+        value: ${{ jobs.sync.outputs.status }}
+      error:
+        description: "Sync error message"
+        value: ${{ jobs.sync.outputs.error }}
+
+jobs:
+  sync:
+    name: Clone Repository
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.sync_status.outputs.status }}
+      error: ${{ steps.sync_status.outputs.error }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull from base of repository
+        id: sync_run
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.project_path }}
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fdx
+            echo "✓ Repository updated successfully"
+
+      - name: Set sync status
+        id: sync_status
+        if: always()
+        run: |
+          if [ "${{ steps.sync_run.outcome }}" == "success" ]; then
+            echo "status=✓ PASSED" >> $GITHUB_OUTPUT
+            echo "error=" >> $GITHUB_OUTPUT
+          else
+            echo "status=✗ FAILED" >> $GITHUB_OUTPUT
+            echo "error=Repository sync failed - check SSH connection and permissions" >> $GITHUB_OUTPUT
+          fi

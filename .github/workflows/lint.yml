@@ -1,0 +1,61 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+    outputs:
+      status:
+        description: "Lint status"
+        value: ${{ jobs.lint.outputs.status }}
+      error:
+        description: "Lint error message"
+        value: ${{ jobs.lint.outputs.error }}
+
+jobs:
+  lint:
+    name: Go Linting
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.lint_status.outputs.status }}
+      error: ${{ steps.lint_status.outputs.error }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run linter
+        id: lint_run
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.project_path }}
+
+            # Check formatting
+            UNFORMATTED=$(gofmt -l .)
+            if [ -n "$UNFORMATTED" ]; then
+              echo "The following files are not properly formatted:"
+              echo "$UNFORMATTED"
+              exit 1
+            fi
+
+            # Run go vet
+            go vet ./...
+
+            echo "✓ Linting passed"
+
+      - name: Set lint status
+        id: lint_status
+        if: always()
+        run: |
+          if [ "${{ steps.lint_run.outcome }}" == "success" ]; then
+            echo "status=✓ PASSED" >> $GITHUB_OUTPUT
+            echo "error=" >> $GITHUB_OUTPUT
+          else
+            echo "status=✗ FAILED" >> $GITHUB_OUTPUT
+            echo "error=Linting failed - check code formatting with gofmt and go vet" >> $GITHUB_OUTPUT
+          fi

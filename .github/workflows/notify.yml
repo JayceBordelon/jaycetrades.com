@@ -1,0 +1,419 @@
+name: Notify
+
+on:
+  workflow_call:
+    inputs:
+      sync_status:
+        required: false
+        type: string
+        default: "✓ PASSED"
+      sync_error:
+        required: false
+        type: string
+        default: ""
+      lint_status:
+        required: false
+        type: string
+        default: "✓ PASSED"
+      lint_error:
+        required: false
+        type: string
+        default: ""
+      build_status:
+        required: false
+        type: string
+        default: "✓ PASSED"
+      build_error:
+        required: false
+        type: string
+        default: ""
+      deploy_status:
+        required: false
+        type: string
+        default: "✓ PASSED"
+      deploy_error:
+        required: false
+        type: string
+        default: ""
+      deploy_commit_sha:
+        required: false
+        type: string
+        default: "unknown"
+      deploy_short_sha:
+        required: false
+        type: string
+        default: "unknown"
+      deploy_commit_message:
+        required: false
+        type: string
+        default: "No commit message"
+      deploy_commit_author:
+        required: false
+        type: string
+        default: "Unknown"
+      deploy_commit_timestamp:
+        required: false
+        type: string
+        default: "Unknown"
+      healthcheck_status:
+        required: false
+        type: string
+        default: "✓ PASSED"
+      healthcheck_error:
+        required: false
+        type: string
+        default: ""
+      healthcheck_results:
+        required: false
+        type: string
+        default: "No results"
+
+jobs:
+  notify:
+    name: Send Email Notification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine overall status
+        id: overall
+        run: |
+          SYNC="${{ inputs.sync_status }}"
+          LINT="${{ inputs.lint_status }}"
+          BUILD="${{ inputs.build_status }}"
+          DEPLOY="${{ inputs.deploy_status }}"
+          HEALTH="${{ inputs.healthcheck_status }}"
+
+          if [[ "$SYNC" == *"FAILED"* ]] || [[ "$LINT" == *"FAILED"* ]] || [[ "$BUILD" == *"FAILED"* ]] || [[ "$DEPLOY" == *"FAILED"* ]] || [[ "$HEALTH" == *"FAILED"* ]]; then
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+          else
+            echo "status=PASSED" >> $GITHUB_OUTPUT
+          fi
+
+          ERRORS=""
+          if [[ "$SYNC" == *"FAILED"* ]]; then
+            ERRORS="${ERRORS}Sync: ${{ inputs.sync_error }}<br>"
+          fi
+          if [[ "$LINT" == *"FAILED"* ]]; then
+            ERRORS="${ERRORS}Lint: ${{ inputs.lint_error }}<br>"
+          fi
+          if [[ "$BUILD" == *"FAILED"* ]]; then
+            ERRORS="${ERRORS}Build: ${{ inputs.build_error }}<br>"
+          fi
+          if [[ "$DEPLOY" == *"FAILED"* ]]; then
+            ERRORS="${ERRORS}Deploy: ${{ inputs.deploy_error }}<br>"
+          fi
+          if [[ "$HEALTH" == *"FAILED"* ]]; then
+            ERRORS="${ERRORS}Health: ${{ inputs.healthcheck_error }}<br>"
+          fi
+
+          echo "errors<<EOF" >> $GITHUB_OUTPUT
+          echo "$ERRORS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send deployment summary email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: bordelonjayce@gmail.com
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "[${{ steps.overall.outputs.status }}] JayceTrades Deployment - ${{ inputs.deploy_short_sha }}"
+          to: bordelonjayce@gmail.com
+          from: JayceTrades CI/CD <bordelonjayce@gmail.com>
+          html_body: |
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body {
+                  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                  background-color: #0a0a0a;
+                  margin: 0;
+                  padding: 40px 20px;
+                  letter-spacing: 0.025em;
+                }
+                .container {
+                  max-width: 600px;
+                  margin: 0 auto;
+                  background-color: #111111;
+                  border-radius: 16px;
+                  overflow: hidden;
+                  border: 1px solid #2a2a2a;
+                }
+                .header {
+                  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                  padding: 48px 40px;
+                  text-align: center;
+                  position: relative;
+                }
+                .header.failed {
+                  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                }
+                .header h1 {
+                  color: #000000;
+                  font-size: 28px;
+                  font-weight: 800;
+                  margin: 0 0 8px 0;
+                  letter-spacing: -0.3px;
+                }
+                .header p {
+                  color: rgba(0, 0, 0, 0.7);
+                  font-size: 16px;
+                  margin: 0;
+                  font-weight: 500;
+                }
+                .content {
+                  padding: 40px;
+                  background-color: #111111;
+                }
+                .section {
+                  margin-bottom: 32px;
+                }
+                .section h3 {
+                  color: #ffffff;
+                  font-size: 13px;
+                  font-weight: 700;
+                  margin: 0 0 16px 0;
+                  text-transform: uppercase;
+                  letter-spacing: 0.1em;
+                }
+                .status-badge {
+                  display: inline-block;
+                  padding: 6px 16px;
+                  border-radius: 6px;
+                  font-weight: 700;
+                  font-size: 14px;
+                  margin-top: 8px;
+                }
+                .status-passed {
+                  background: #10b981;
+                  color: #000000;
+                }
+                .status-failed {
+                  background: #ef4444;
+                  color: #ffffff;
+                }
+                .info-box {
+                  background-color: #1a1a1a;
+                  border-radius: 8px;
+                  padding: 28px;
+                  border: 1px solid #2a2a2a;
+                }
+                .info-grid {
+                  display: grid;
+                  grid-template-columns: 140px 1fr;
+                  gap: 16px;
+                  font-size: 14px;
+                }
+                .info-label {
+                  color: #666666;
+                  font-weight: 500;
+                }
+                .info-value {
+                  color: #ffffff;
+                  font-weight: 700;
+                  word-break: break-all;
+                }
+                .error-box {
+                  background-color: rgba(239, 68, 68, 0.1);
+                  border: 1px solid #ef4444;
+                  border-radius: 8px;
+                  padding: 24px;
+                  color: #fca5a5;
+                  line-height: 1.8;
+                }
+                .pipeline-stages {
+                  display: grid;
+                  gap: 12px;
+                }
+                .stage {
+                  background-color: #1a1a1a;
+                  padding: 16px 20px;
+                  border-radius: 8px;
+                  border: 1px solid #2a2a2a;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                }
+                .stage-name {
+                  color: #ffffff;
+                  font-weight: 600;
+                  font-size: 14px;
+                }
+                .stage-status {
+                  font-weight: 700;
+                  font-size: 14px;
+                }
+                .stage-status.passed {
+                  color: #10b981;
+                }
+                .stage-status.failed {
+                  color: #ef4444;
+                }
+                .stage-status.skipped {
+                  color: #666666;
+                }
+                .health-results {
+                  background-color: #0a0a0a;
+                  padding: 24px;
+                  border-radius: 8px;
+                  border: 2px solid #10b981;
+                  font-family: 'JetBrains Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+                  font-size: 13px;
+                  line-height: 1.8;
+                  color: #10b981;
+                  font-weight: 600;
+                }
+                .links-box {
+                  background-color: #1a1a1a;
+                  padding: 20px 24px;
+                  border-radius: 8px;
+                  border: 1px solid #2a2a2a;
+                  line-height: 2;
+                }
+                .links-box a {
+                  color: #10b981;
+                  text-decoration: none;
+                  font-weight: 600;
+                }
+                .links-box a:hover {
+                  text-decoration: underline;
+                }
+                .footer {
+                  background-color: #0a0a0a;
+                  padding: 28px 40px;
+                  border-top: 1px solid #2a2a2a;
+                }
+                .footer p {
+                  margin: 0 0 4px 0;
+                  font-size: 14px;
+                }
+                .footer-label {
+                  color: #666666;
+                }
+                .footer-value {
+                  color: #10b981;
+                  font-weight: 800;
+                  font-size: 16px;
+                }
+                .copyright {
+                  text-align: center;
+                  padding: 28px 20px 0;
+                  color: #444444;
+                  font-size: 12px;
+                  line-height: 1.6;
+                }
+                pre {
+                  margin: 0;
+                  white-space: pre-wrap;
+                  word-wrap: break-word;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header ${{ steps.overall.outputs.status == 'FAILED' && 'failed' || '' }}">
+                  <h1>JayceTrades</h1>
+                  <p>Build ${{ inputs.deploy_short_sha || 'unknown' }}</p>
+                  <span class="status-badge status-${{ steps.overall.outputs.status == 'FAILED' && 'failed' || 'passed' }}">
+                    ${{ steps.overall.outputs.status == 'FAILED' && '✗ FAILED' || '✓ PASSED' }}
+                  </span>
+                </div>
+
+                <div class="content">
+                  ${{ steps.overall.outputs.status == 'FAILED' && format('<div class="section"><h3>Deployment Errors</h3><div class="error-box">{0}</div></div>', steps.overall.outputs.errors) || '' }}
+
+                  <div class="section">
+                    <h3>Commit Information</h3>
+                    <div class="info-box">
+                      <div class="info-grid">
+                        <span class="info-label">Message</span>
+                        <span class="info-value">${{ inputs.deploy_commit_message || 'No message' }}</span>
+
+                        <span class="info-label">Author</span>
+                        <span class="info-value">${{ inputs.deploy_commit_author || 'Unknown' }}</span>
+
+                        <span class="info-label">SHA</span>
+                        <span class="info-value">${{ inputs.deploy_commit_sha || 'unknown' }}</span>
+
+                        <span class="info-label">Timestamp</span>
+                        <span class="info-value">${{ inputs.deploy_commit_timestamp || 'Unknown' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <h3>Pipeline Stages</h3>
+                    <div class="pipeline-stages">
+                      <div class="stage">
+                        <span class="stage-name">1. Repository Sync</span>
+                        <span class="stage-status ${{ contains(inputs.sync_status, 'FAILED') && 'failed' || (contains(inputs.sync_status, 'Not Run') && 'skipped' || 'passed') }}">${{ inputs.sync_status || '✓ PASSED' }}</span>
+                      </div>
+                      <div class="stage">
+                        <span class="stage-name">2. Go Linting</span>
+                        <span class="stage-status ${{ contains(inputs.lint_status, 'FAILED') && 'failed' || (contains(inputs.lint_status, 'Not Run') && 'skipped' || 'passed') }}">${{ inputs.lint_status || '✓ PASSED' }}</span>
+                      </div>
+                      <div class="stage">
+                        <span class="stage-name">3. Docker Build</span>
+                        <span class="stage-status ${{ contains(inputs.build_status, 'FAILED') && 'failed' || (contains(inputs.build_status, 'Not Run') && 'skipped' || 'passed') }}">${{ inputs.build_status || '✓ PASSED' }}</span>
+                      </div>
+                      <div class="stage">
+                        <span class="stage-name">4. Deployment</span>
+                        <span class="stage-status ${{ contains(inputs.deploy_status, 'FAILED') && 'failed' || (contains(inputs.deploy_status, 'Not Run') && 'skipped' || 'passed') }}">${{ inputs.deploy_status || '✓ PASSED' }}</span>
+                      </div>
+                      <div class="stage">
+                        <span class="stage-name">5. Health Check</span>
+                        <span class="stage-status ${{ contains(inputs.healthcheck_status, 'FAILED') && 'failed' || (contains(inputs.healthcheck_status, 'Not Run') && 'skipped' || 'passed') }}">${{ inputs.healthcheck_status || '✓ PASSED' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <h3>Health Check Results</h3>
+                    <div class="health-results">
+                      <pre>${{ inputs.healthcheck_results || 'No results available' }}</pre>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <h3>Deployment Details</h3>
+                    <div class="info-box">
+                      <div class="info-grid">
+                        <span class="info-label">Repository</span>
+                        <span class="info-value">${{ github.repository }}</span>
+
+                        <span class="info-label">Branch</span>
+                        <span class="info-value">${{ github.ref_name }}</span>
+
+                        <span class="info-label">Version</span>
+                        <span class="info-value">jaycetrades:${{ inputs.deploy_short_sha || 'unknown' }}</span>
+
+                        <span class="info-label">Triggered by</span>
+                        <span class="info-value">${{ github.actor }}</span>
+
+                        <span class="info-label">Workflow Run</span>
+                        <span class="info-value"><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color: #10b981; text-decoration: none;">#${{ github.run_number }}</a></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <h3>Quick Links</h3>
+                    <div class="links-box">
+                      <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ inputs.deploy_commit_sha }}">View Commit on GitHub</a><br>
+                      <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="footer">
+                  <p class="footer-label">Deployment Pipeline</p>
+                  <p class="footer-value">jaycetrades.com</p>
+                </div>
+              </div>
+
+              <div class="copyright">
+                <p>Automated deployment notification • Build ${{ inputs.deploy_short_sha || 'unknown' }}</p>
+              </div>
+            </body>
+            </html>
