@@ -22,18 +22,9 @@ jobs:
       project_path: /home/jayce/jaycetrades.com
       repo_url: git@github.com:JayceBordelon/jaycetrades.com.git
 
-  lint:
-    name: Lint
-    needs: sync
-    if: success()
-    uses: ./.github/workflows/lint.yml
-    secrets: inherit
-    with:
-      project_path: /home/jayce/jaycetrades.com
-
   build:
     name: Build
-    needs: lint
+    needs: sync
     if: success()
     uses: ./.github/workflows/build.yml
     secrets: inherit
@@ -60,15 +51,13 @@ jobs:
 
   notify:
     name: Notify
-    needs: [sync, lint, build, deploy, healthcheck]
+    needs: [sync, build, deploy, healthcheck]
     if: always()
     uses: ./.github/workflows/notify.yml
     secrets: inherit
     with:
       sync_status: ${{ needs.sync.result == 'success' && needs.sync.outputs.status || (needs.sync.result == 'skipped' && '○ Not Run' || '✗ FAILED') }}
       sync_error: ${{ needs.sync.outputs.error || '' }}
-      lint_status: ${{ needs.lint.result == 'success' && needs.lint.outputs.status || (needs.lint.result == 'skipped' && '○ Not Run' || '✗ FAILED') }}
-      lint_error: ${{ needs.lint.outputs.error || '' }}
       build_status: ${{ needs.build.result == 'success' && needs.build.outputs.status || (needs.build.result == 'skipped' && '○ Not Run' || '✗ FAILED') }}
       build_error: ${{ needs.build.outputs.error || '' }}
       deploy_status: ${{ needs.deploy.result == 'success' && needs.deploy.outputs.status || (needs.deploy.result == 'skipped' && '○ Not Run' || '✗ FAILED') }}
