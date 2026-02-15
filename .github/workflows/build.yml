@@ -39,7 +39,7 @@ jobs:
             SHORT_SHA=$(git rev-parse --short HEAD)
 
             docker compose build --no-cache scanner
-            docker tag jaycetrades.com-scanner:latest "jaycetrades.com-scanner:${SHORT_SHA}"
+            docker tag jaycetradescom-scanner:latest "jaycetradescom-scanner:${SHORT_SHA}"
 
       - name: Set build status
         id: build_status

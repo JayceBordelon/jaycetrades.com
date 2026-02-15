@@ -80,7 +80,7 @@ jobs:
 
             # Cleanup old images
             docker image prune -f
-            docker images "jaycetrades.com-scanner" --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
+            docker images "jaycetradescom-scanner" --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | tail -n +4 | awk '{print $1}' | xargs -r docker rmi -f || true
 
       - name: Set deploy status
         id: deploy_status
