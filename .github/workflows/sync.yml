@@ -39,7 +39,7 @@ jobs:
             cd ${{ inputs.project_path }}
             git fetch origin
             git reset --hard origin/main
-            git clean -fdx
+            git clean -fd -e .env
             echo "✓ Repository updated successfully"
 
       - name: Set sync status

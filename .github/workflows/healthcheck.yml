@@ -38,7 +38,7 @@ jobs:
             cd ${{ inputs.project_path }}
 
             # Check if container is running
-            CONTAINER_STATUS=$(docker compose ps --format json | jq -r '.[0].State // "not found"')
+            CONTAINER_STATUS=$(docker compose ps scanner --format "{{.State}}" 2>/dev/null || echo "not found")
 
             if [ "$CONTAINER_STATUS" == "running" ]; then
               echo "✓ Scanner container is running"
