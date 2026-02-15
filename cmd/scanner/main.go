@@ -18,6 +18,50 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+// US Market Holidays (NYSE/NASDAQ closed)
+var marketHolidays = map[string]string{
+	// 2025
+	"2025-01-01": "New Year's Day",
+	"2025-01-20": "MLK Day",
+	"2025-02-17": "Presidents Day",
+	"2025-04-18": "Good Friday",
+	"2025-05-26": "Memorial Day",
+	"2025-06-19": "Juneteenth",
+	"2025-07-04": "Independence Day",
+	"2025-09-01": "Labor Day",
+	"2025-11-27": "Thanksgiving",
+	"2025-12-25": "Christmas",
+	// 2026
+	"2026-01-01": "New Year's Day",
+	"2026-01-19": "MLK Day",
+	"2026-02-16": "Presidents Day",
+	"2026-04-03": "Good Friday",
+	"2026-05-25": "Memorial Day",
+	"2026-06-19": "Juneteenth",
+	"2026-07-03": "Independence Day (Observed)",
+	"2026-09-07": "Labor Day",
+	"2026-11-26": "Thanksgiving",
+	"2026-12-25": "Christmas",
+}
+
+func isMarketOpen() (bool, string) {
+	loc, _ := time.LoadLocation("America/New_York")
+	now := time.Now().In(loc)
+	today := now.Format("2006-01-02")
+
+	// Check for holiday
+	if holiday, exists := marketHolidays[today]; exists {
+		return false, holiday
+	}
+
+	// Check for weekend (should already be handled by cron, but double-check)
+	if now.Weekday() == time.Saturday || now.Weekday() == time.Sunday {
+		return false, "Weekend"
+	}
+
+	return true, ""
+}
+
 func main() {
 	cfg := config.Load()
 
@@ -36,6 +80,10 @@ func main() {
 	emailClient := email.NewClient(cfg.ResendAPIKey)
 
 	job := func() {
+		if open, reason := isMarketOpen(); !open {
+			log.Printf("Skipping trade analysis: Market closed (%s)", reason)
+			return
+		}
 		runTradeAnalysis(cfg, scraper, analyzer, emailClient)
 	}
 
